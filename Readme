@@ -1,0 +1,250 @@
+VoltMeter (Arduino Uno) — Command & Setup
+Manual
+Firmware Version: VoltMeter v1.2 (Memory Optimized)
+1. Introduction
+This manual explains all available serial commands for the VoltMeter firmware and provides a clear stepby-step guide to set up, calibrate, and operate the system. The commands are entered through the Serial
+Monitor (or any serial terminal) at 115200 baud with newline line endings.
+2. Basic Setup Procedure
+Hardware Connection
+Voltage Divider Wiring:
+Connect the input voltage (Vin) → Top resistor (RTOP)
+Connect midpoint between RTOP and RBOT → A0
+Connect bottom resistor (RBOT) → GND
+Make sure A0 never exceeds 5 V (for DEFAULT reference) or 1.1 V (for INTERNAL reference).
+Power the Arduino from a stable USB or regulated 5 V supply.
+Software Setup
+Upload the VoltMeter firmware to your Arduino Uno.
+Open Serial Monitor at 115200 baud.
+Set line ending to Newline.
+You should see the startup report and the line:
+Type HELP for commands.
+3. Command Reference Table
+Command Function Example Description
+HELP Show help list HELP
+Lists all available commands
+with basic usage examples.
+1.
+2.
+3.
+4.
+5.
+6.
+1.
+2.
+3.
+4.
+1
+Command Function Example Description
+SETREF DEFAULT
+Set ADC
+reference to Vcc
+(5V)
+SETREF DEFAULT
+Use the Arduino’s operating
+voltage as reference. Suitable
+for mid-to-high voltage dividers.
+SETREF INTERNAL
+Set ADC
+reference to
+1.1V
+SETREF INTERNAL
+Uses the internal bandgap
+reference for higher accuracy
+when A0 voltage ≤ 1.1V.
+SETREF AUTO
+Auto-select
+reference SETREF AUTO
+The firmware tests the signal
+level and automatically picks
+DEFAULT or INTERNAL.
+CAL <volts> Calibrate using a
+known voltage
+CAL 12.000
+Runs calibration assuming the
+applied input is 12.000V.
+Calculates scale factor (K) and
+saves to EEPROM.
+CAL <volts> RBOT
+<ohms>
+Calibrate with
+known bottom
+resistor
+CAL 12.000 RBOT
+10000
+Uses known RBOT to estimate
+RTOP from measured K.
+CAL <volts> RTOP
+<ohms>
+Calibrate with
+known top
+resistor
+CAL 12.000 RTOP
+22000
+Uses known RTOP to estimate
+RBOT from measured K.
+CAL <volts> [RBOT/
+RTOP] SAMPLES <n>
+Calibrate with
+custom sample
+size
+CAL 12.000 RBOT
+10000 SAMPLES
+512
+Performs calibration using <n>
+samples for more precision.
+PRINTCAL
+Print current
+calibration data
+PRINTCAL Displays stored calibration info
+(K, vref, resistors, stats, CRC).
+CLEARCAL /
+RESETCAL
+Erase calibration CLEARCAL
+Clears calibration block from
+EEPROM. The voltmeter will
+require recalibration.
+MEASURE
+Take one
+reading
+MEASURE
+Captures a single ADC
+measurement and prints full
+stats and computed Vin.
+LOG ON
+Enable
+continuous
+logging
+LOG ON
+Starts automatic measurement
+every second (default interval:
+1000 ms).
+LOG OFF
+Disable
+continuous
+logging
+LOG OFF Stops periodic measurement
+output.
+2
+Command Function Example Description
+FACTORYRESET
+(optional)
+Reset
+calibration,
+settings, and
+counters
+FACTORYRESET
+Clears EEPROM calibration and
+resets counters to default
+values. (Only available if added to
+sketch)
+FULLRESET (optional,
+dangerous)
+Wipe entire
+EEPROM
+FULLRESET
+Erases all EEPROM memory
+(including boot counter). Use
+only for recovery. (Optional, must
+be added manually)
+4. Step-by-Step Setup & Calibration
+Step 1 — Power & Verify Communication
+Open Serial Monitor at 115200 baud.
+You should see a startup banner like:
+================= Voltmeter Startup =================
+Firmware: VoltMeter v1.2 (mem-opt)
+Boot Cnt: 5
+EEPROM: No valid calibration (CRC fail or empty).
+Run CAL <volts> [RBOT|RTOP] to calibrate.
+=====================================================
+Step 2 — Choose Reference Mode
+Depending on your divider ratio and input voltage range: - For 0–5 V ADC range, type:
+SETREF DEFAULT
+- For 0–1.1 V ADC range, type:
+SETREF INTERNAL
+- Or let the firmware decide automatically:
+SETREF AUTO
+•
+•
+3
+Step 3 — Run Calibration
+Apply a stable, known voltage (measured with a DMM) to the divider input (Vin).
+Enter a calibration command such as:
+CAL 12.000 RBOT 10000
+The system will sample and calculate ratio K = Vin / Vadc , then save it to EEPROM.
+Wait for the confirmation message:
+[CAL] Calibration saved.
+To verify calibration:
+PRINTCAL
+Step 4 — Start Measuring
+To measure once:
+MEASURE
+To enable continuous measurement (logging):
+LOG ON
+To stop logging:
+LOG OFF
+5. Understanding Measurement Output
+Example output:
+t=10233 ms, ADC_raw_mean=682.35 (min=676, max=689), vref=5.000000,
+Vadc=3.333100, Vin=11.936821 V ±0.012, Vin_IIR=11.940832, ref=DEFAULT, cal=YES
+Explanation: - t — time since boot (ms) - ADC_raw_mean — average ADC value (trimmed) - vref —
+active ADC reference voltage - Vadc — measured voltage at A0 - Vin — actual computed input voltage
+1.
+2.
+3.
+4.
+5.
+4
+(calibrated) - ± — uncertainty derived from ADC noise - Vin_IIR — filtered Vin (IIR smoothing) - ref —
+reference source (DEFAULT/INTERNAL) - cal — calibration status (YES = valid calibration loaded)
+6. EEPROM & Persistence
+Calibration and counters are stored in EEPROM and loaded automatically at startup.
+If CRC fails or calibration was cleared, the system requests recalibration.
+Boot counter increments each power-up.
+7. Factory Reset & Recovery
+If calibration or EEPROM data becomes invalid: - Run:
+CLEARCAL
+to remove calibration only. - Or (if added):
+FACTORYRESET
+to restore all settings to default.
+8. Tips for Reliable Operation
+Ensure A0 voltage never exceeds Vref.
+Use metal film resistors (1% or better) for long-term stability.
+Keep divider impedance < 100 kΩ total.
+Recalibrate after hardware changes or if voltage readings drift.
+Use a stable power supply when operating in DEFAULT mode.
+Minimize EEPROM writes — avoid frequent unnecessary calibrations.
+9. Example Workflow Summary
+Upload firmware and open Serial Monitor.
+Enter SETREF DEFAULT .
+Apply a known voltage (e.g., 12.000 V).
+Type CAL 12.000 RBOT 10000 .
+Wait for [CAL] Calibration saved.
+Type PRINTCAL to confirm.
+Type LOG ON to begin continuous voltage readings.
+•
+•
+•
+•
+•
+•
+•
+•
+•
+1.
+2.
+3.
+4.
+5.
+6.
+7.
+5
+10. Command Quick Reference
+HELP — Show all commands.
+SETREF DEFAULT|INTERNAL|AUTO — Set ADC reference mode.
+CAL <volts> [RBOT|RTOP] [SAMPLES <n>] — Calibrate.
+PRINTCAL — Show stored calibration data.
+CLEARCAL / RESETCAL — Clear calibration.
+MEASURE — Take one measurement.
+LOG ON / OFF — Toggle periodic logging.
+FACTORYRESET (optional) — Reset calibration, counter, and settings.
+FULLRESET (optional) — Erase all EEPROM data (dangerous).
